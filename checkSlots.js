@@ -143,10 +143,17 @@ function processAvailability(orders, calendar) {
   return availability;
 }
 
-async function getAvailableSlots() {
+async function getAvailableSlots(selectedTown) {
   try {
     const [orders, calendar] = await Promise.all([fetchShopifyOrders(), fetchDeliveryCalendar()]);
-    return processAvailability(orders, calendar);
+
+    // ✅ Ensure only slots for the selected town are processed
+    if (!calendar[selectedTown]) {
+      console.warn(`⚠️ No data found for town: ${selectedTown}`);
+      return {};
+    }
+
+    return processAvailability(orders, calendar, selectedTown);
   } catch (error) {
     console.error("❌ Error fetching data:", error);
     return {};
