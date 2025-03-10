@@ -1,11 +1,9 @@
-import fetch from 'node-fetch';
-
-// Shopify API credentials (Use environment variables in production!)
+// Shopify API credentials (should be stored securely in production)
 const SHOPIFY_ADMIN_API_URL = "https://pendragons-smokehouse.myshopify.com/admin/api/2025-01/graphql.json";
 const SHOPIFY_ACCESS_TOKEN = "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";
-const DELIVERY_CALENDAR_URL = "https://cdn.shopify.com/s/files/1/0919/1702/5562/files/delivery_calendar.json?v=1741626987";
+const DELIVERY_CALENDAR_URL = "https://pen-dragon-house.github.io/delivery-slot/delivery_calendar.json";
 
-// GraphQL Query to fetch recent orders with delivery details
+// GraphQL Query to fetch orders
 const ORDER_QUERY = `{
   orders(first: 50) {
     edges {
@@ -21,6 +19,7 @@ const ORDER_QUERY = `{
   }
 }`;
 
+// Fetch orders from Shopify
 async function fetchShopifyOrders() {
   const response = await fetch(SHOPIFY_ADMIN_API_URL, {
     method: "POST",
@@ -34,14 +33,15 @@ async function fetchShopifyOrders() {
   return data.data.orders.edges.map(edge => edge.node);
 }
 
+// Fetch delivery calendar
 async function fetchDeliveryCalendar() {
   const response = await fetch(DELIVERY_CALENDAR_URL);
   return await response.json();
 }
 
-// ✅ FIX: Ensure date is correctly formatted
+// Ensure date format matches Shopify’s format
 function formatShopifyDate(dateString) {
-    if (!dateString || typeof dateString !== "string") return null;
+    if (!dateString) return null;
 
     const months = {
         "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
@@ -50,91 +50,58 @@ function formatShopifyDate(dateString) {
     };
 
     const parts = dateString.trim().split(/\s+/);
-    if (parts.length !== 3) {
-        console.log(`⚠️ Invalid date format received: '${dateString}'`);
-        return null;
-    }
+    if (parts.length !== 3) return null;
 
     const [month, day, year] = parts;
-    const formattedDate = `${year}-${months[month]}-${day.padStart(2, "0")}`.replace(/,+$/, ""); 
-    
-    console.log(`✅ Parsed date: '${dateString}' -> '${formattedDate}'`);
-    return formattedDate;
+    return `${year}-${months[month]}-${day.padStart(2, "0")}`;
 }
 
-// ✅ FIX: Preserve Shopify's EXACT time format
-function normalizeTimeFormat(time) {
-    return time.replace(/\s+/g, " ").trim();  // ✅ Only trims spaces, nothing else
-}
-
-// Ensure we find the town based on postal code
+// Match ZIP code to town
 function findTownByZip(zip, calendar) {
     if (!zip) return null;
     for (let town in calendar) {
         if (calendar[town].zip_codes?.includes(zip.trim())) {
-            console.log(`✅ Matched ZIP ${zip} to Town ${town}`);
             return town;
         }
     }
-    console.log(`⚠️ No match found for ZIP: ${zip}`);
     return null;
 }
 
+// Process availability
 function processAvailability(orders, calendar) {
   let availability = {};
   let bookedSlots = {};
 
-  // Extract booked slots from Shopify orders
   orders.forEach(order => {
     const deliveryDateRaw = order.customAttributes.find(attr => attr.key === "Delivery Date")?.value;
     const deliveryTimeRaw = order.customAttributes.find(attr => attr.key === "Delivery Time")?.value;
     const deliveryZip = order.customAttributes.find(attr => attr.key === "Delivery Postal Code")?.value;
 
-    if (!deliveryDateRaw || !deliveryTimeRaw || !deliveryZip) {
-        console.log(`⚠️ Skipping order due to missing values: Zip=${deliveryZip}, Date=${deliveryDateRaw}, Time=${deliveryTimeRaw}`);
-        return;
-    }
+    if (!deliveryDateRaw || !deliveryTimeRaw || !deliveryZip) return;
 
     const deliveryDate = formatShopifyDate(deliveryDateRaw);
-    if (!deliveryDate) {
-        console.log(`⚠️ Skipping order due to invalid formatted date: '${deliveryDateRaw}'`);
-        return;
-    }
+    if (!deliveryDate) return;
 
-    const deliveryTime = normalizeTimeFormat(deliveryTimeRaw);
+    const deliveryTime = deliveryTimeRaw.trim();
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
-    if (deliveryTown && calendar[deliveryTown] && deliveryDate) {
-        console.log(`✅ Booking registered: Town=${deliveryTown}, Date=${deliveryDate}, Time=${deliveryTime}`);
-
-        if (!bookedSlots[deliveryDate]) {
-            bookedSlots[deliveryDate] = {};
-        }
-
-        if (!bookedSlots[deliveryDate][deliveryTime]) {
-            bookedSlots[deliveryDate][deliveryTime] = 0;
-        }
-
+    if (deliveryTown && calendar[deliveryTown]) {
+        if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
+        if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
         bookedSlots[deliveryDate][deliveryTime] += 1;
-    } else {
-        console.log(`⚠️ Skipping order. Could not match Town=${deliveryTown}, Date=${deliveryDate}, Time=${deliveryTime}`);
     }
   });
 
-  console.log("📊 Booked Slots Summary Before Availability Calculation:", JSON.stringify(bookedSlots, null, 2));
-
-  // Compute remaining slots based on calendar availability
+  // Compute remaining slots
   for (let town in calendar) {
     if (town !== "time_slots") {
       calendar[town].dates.forEach(({ date }) => {
         if (new Date(date) >= new Date()) {
           availability[date] = availability[date] || {};
           for (let timeSlot in calendar.time_slots) {
-            let formattedTimeSlot = normalizeTimeFormat(timeSlot);
             let maxOrders = calendar.time_slots[timeSlot].max_orders;
-            let booked = bookedSlots[date]?.[formattedTimeSlot] || 0;
+            let booked = bookedSlots[date]?.[timeSlot] || 0;
             let remaining = maxOrders - booked;
-            console.log(`📉 Availability Check: Date=${date}, Time=${formattedTimeSlot}, Booked=${booked}, Remaining=${remaining}`);
             availability[date][timeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
           }
         }
@@ -145,6 +112,7 @@ function processAvailability(orders, calendar) {
   return availability;
 }
 
+// Main function to fetch and return availability
 async function getAvailableSlots() {
   try {
     const [orders, calendar] = await Promise.all([fetchShopifyOrders(), fetchDeliveryCalendar()]);
@@ -154,9 +122,3 @@ async function getAvailableSlots() {
     return {};
   }
 }
-
-// Example usage:
-(async () => {
-  const availability = await getAvailableSlots();
-  console.log("📌 Final Availability Output:", availability);
-})();
