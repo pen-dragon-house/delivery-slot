@@ -65,8 +65,7 @@ function findTownByZip(zip, calendar) {
   return null;
 }
 
-function processAvailability(orders, calendar, selectedTown) {
-  let availability = {};
+function calculateRemainingSlots(orders, calendar) {
   let bookedSlots = {};
 
   orders.forEach(order => {
@@ -82,12 +81,17 @@ function processAvailability(orders, calendar, selectedTown) {
     const deliveryTime = normalizeTimeFormat(deliveryTimeRaw);
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
-    if (deliveryTown && deliveryTown === selectedTown) {
+    if (deliveryTown) {
       if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
       if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
       bookedSlots[deliveryDate][deliveryTime] += 1;
     }
   });
+  return bookedSlots;
+}
+
+function getAvailabilityForTown(calendar, bookedSlots, selectedTown) {
+  let availability = {};
 
   if (calendar[selectedTown]) {
     calendar[selectedTown].dates.forEach(({ date }) => {
@@ -113,7 +117,8 @@ async function getAvailableSlots(selectedTown) {
       console.warn(`⚠️ No data found for town: ${selectedTown}`);
       return {};
     }
-    return processAvailability(orders, calendar, selectedTown);
+    const bookedSlots = calculateRemainingSlots(orders, calendar);
+    return getAvailabilityForTown(calendar, bookedSlots, selectedTown);
   } catch (error) {
     console.error("❌ Error fetching data:", error);
     return {};
