@@ -97,7 +97,7 @@ function processAvailability(orders, calendar, selectedTown) {
     }
   });
 
-  console.log("📊 Booked Slots Before Availability Calculation:", JSON.stringify(bookedSlots, null, 2));
+  // console.log("📊 Booked Slots Before Availability Calculation:", JSON.stringify(bookedSlots, null, 2));
 
   // ✅ Compute remaining slots ONLY for the selected town
   if (calendar[selectedTown]) {
@@ -109,7 +109,7 @@ function processAvailability(orders, calendar, selectedTown) {
           let maxOrders = calendar.time_slots[timeSlot].max_orders;
           let booked = bookedSlots[date]?.[formattedTimeSlot] || 0;
           let remaining = maxOrders - booked;
-          console.log(`📉 Availability Check: Date=${date}, Time=${formattedTimeSlot}, Booked=${booked}, Remaining=${remaining}`);
+          // console.log(`📉 Availability Check: Date=${date}, Time=${formattedTimeSlot}, Booked=${booked}, Remaining=${remaining}`);
           availability[date][formattedTimeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
         }
       }
@@ -141,5 +141,5 @@ async function getAvailableSlots(selectedTown) {
 (async () => {
   const town = new URLSearchParams(window.location.search).get("town");
   const availability = await getAvailableSlots(town);
-  console.log("📌 Final Availability Output:", availability);
+  // console.log("📌 Final Availability Output:", availability);
 })();
