@@ -1,4 +1,4 @@
-// Shopify API credentials (should be stored securely in production)
+// Shopify API credentials (Replace with secure storage in production)
 const SHOPIFY_ADMIN_API_URL = "https://pendragons-smokehouse.myshopify.com/admin/api/2025-01/graphql.json";
 const SHOPIFY_ACCESS_TOKEN = "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";
 const DELIVERY_CALENDAR_URL = "https://pen-dragon-house.github.io/delivery-slot/delivery_calendar.json";
@@ -19,55 +19,75 @@ const ORDER_QUERY = `{
   }
 }`;
 
-// Fetch orders from Shopify
+// Fetch orders from Shopify Admin API
 async function fetchShopifyOrders() {
-  const response = await fetch(SHOPIFY_ADMIN_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
-    },
-    body: JSON.stringify({ query: ORDER_QUERY }),
-  });
-  const data = await response.json();
-  return data.data.orders.edges.map(edge => edge.node);
+  try {
+    const response = await fetch(SHOPIFY_ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
+      },
+      body: JSON.stringify({ query: ORDER_QUERY }),
+    });
+
+    if (!response.ok) {
+      console.error("❌ Error fetching orders from Shopify API.");
+      return [];
+    }
+
+    const data = await response.json();
+    return data.data.orders.edges.map(edge => edge.node);
+  } catch (error) {
+    console.error("❌ Shopify API Fetch Error:", error);
+    return [];
+  }
 }
 
 // Fetch delivery calendar
 async function fetchDeliveryCalendar() {
-  const response = await fetch(DELIVERY_CALENDAR_URL);
-  return await response.json();
+  try {
+    const response = await fetch(DELIVERY_CALENDAR_URL);
+    if (!response.ok) {
+      console.error("❌ Error fetching delivery calendar.");
+      return {};
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("❌ Delivery Calendar Fetch Error:", error);
+    return {};
+  }
 }
 
-// Ensure date format matches Shopify’s format
+// Format Shopify date to YYYY-MM-DD
 function formatShopifyDate(dateString) {
-    if (!dateString) return null;
+  if (!dateString) return null;
 
-    const months = {
-        "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
-        "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
-        "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12"
-    };
+  const months = {
+    "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+    "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+    "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12"
+  };
 
-    const parts = dateString.trim().split(/\s+/);
-    if (parts.length !== 3) return null;
+  const parts = dateString.trim().split(/\s+/);
+  if (parts.length !== 3) return null;
 
-    const [month, day, year] = parts;
-    return `${year}-${months[month]}-${day.padStart(2, "0")}`;
+  const [month, day, year] = parts;
+  return `${year}-${months[month]}-${day.padStart(2, "0")}`;
 }
 
 // Match ZIP code to town
 function findTownByZip(zip, calendar) {
-    if (!zip) return null;
-    for (let town in calendar) {
-        if (calendar[town].zip_codes?.includes(zip.trim())) {
-            return town;
-        }
+  if (!zip) return null;
+  for (let town in calendar) {
+    if (calendar[town].zip_codes?.includes(zip.trim())) {
+      return town;
     }
-    return null;
+  }
+  return null;
 }
 
-// Process availability
+// Process available slots
 function processAvailability(orders, calendar) {
   let availability = {};
   let bookedSlots = {};
@@ -86,9 +106,9 @@ function processAvailability(orders, calendar) {
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
     if (deliveryTown && calendar[deliveryTown]) {
-        if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
-        if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
-        bookedSlots[deliveryDate][deliveryTime] += 1;
+      if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
+      if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
+      bookedSlots[deliveryDate][deliveryTime] += 1;
     }
   });
 
