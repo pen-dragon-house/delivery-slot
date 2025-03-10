@@ -51,7 +51,7 @@ function formatShopifyDate(dateString) {
     if (parts.length !== 3) return null;
 
     const [month, day, year] = parts;
-    return `${year}-${months[month]}-${day.padStart(2, "0")}`;
+    return `${year}-${months[month]}-${day.padStart(2, "0")}`.trim(); // 🔥 Ensures correct format
 }
 
 // ✅ FIX: Preserve Shopify's EXACT time format
