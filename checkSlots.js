@@ -110,7 +110,22 @@ function processAvailability(orders, calendar, selectedTown) {
           let booked = bookedSlots[date]?.[formattedTimeSlot] || 0;
           let remaining = maxOrders - booked;
           // console.log(`📉 Availability Check: Date=${date}, Time=${formattedTimeSlot}, Booked=${booked}, Remaining=${remaining}`);
-          availability[date][formattedTimeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
+          // Apply custom slot messages
+        let slotMessage;
+        if (remaining >= 4) {
+          slotMessage = `${remaining} slots still available`;
+        } else if (remaining === 3) {
+          slotMessage = `3 slots still available`;
+        } else if (remaining === 2) {
+          slotMessage = `2 slots left —going fast!`;
+        } else if (remaining === 1) {
+          slotMessage = `Last slot remaining!`;
+        } else {
+          slotMessage = `Fully booked`;
+        }
+
+        availability[date][formattedTimeSlot] = slotMessage;
+          
         }
       }
     });
