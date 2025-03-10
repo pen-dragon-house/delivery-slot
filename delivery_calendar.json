@@ -1,0 +1,24 @@
+{
+  "time_slots": {
+    " 5:00 PM -  6:00 PM": { "max_orders": 4 },
+    " 6:00 PM -  7:00 PM": { "max_orders": 4 },
+    " 7:00 PM -  8:00 PM": { "max_orders": 4 },
+    " 8:00 PM -  9:00 PM": { "max_orders": 4 }
+  },
+  "montclair": {
+    "zip_codes": ["07042", "07043"],
+    "dates": [
+      { "date": "2025-03-13", "day": "Thursday" },
+      { "date": "2025-03-15", "day": "Saturday" },
+      { "date": "2025-03-16", "day": "Sunday" }
+    ]
+  },
+  "cedar_grove": {
+    "zip_codes": ["07009"],
+    "dates": [
+      { "date": "2025-03-20", "day": "Thursday" },
+      { "date": "2025-03-22", "day": "Saturday" },
+      { "date": "2025-03-23", "day": "Sunday" }
+    ]
+  }
+}
