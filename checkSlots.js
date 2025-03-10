@@ -75,7 +75,7 @@ function processAvailability(orders, calendar, selectedTown) {
   let availability = {};
   let bookedSlots = {};
 
-  // ✅ Process only orders that match the selected town
+  // ✅ Extract booked slots from Shopify orders
   orders.forEach(order => {
     const deliveryDateRaw = order.customAttributes.find(attr => attr.key === "Delivery Date")?.value;
     const deliveryTimeRaw = order.customAttributes.find(attr => attr.key === "Delivery Time")?.value;
@@ -103,8 +103,9 @@ function processAvailability(orders, calendar, selectedTown) {
       if (new Date(date) >= new Date()) {
         availability[date] = availability[date] || {};
         for (let timeSlot in calendar.time_slots) {
+          let formattedTimeSlot = normalizeTimeFormat(timeSlot);
           let maxOrders = calendar.time_slots[timeSlot].max_orders;
-          let booked = bookedSlots[date]?.[timeSlot] || 0;
+          let booked = bookedSlots[date]?.[formattedTimeSlot] || 0;
           let remaining = maxOrders - booked;
           availability[date][timeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
         }
@@ -126,7 +127,7 @@ async function getAvailableSlots(selectedTown) {
       return {};
     }
 
-    return processAvailability(orders, calendar, selectedTown);
+    return processAvailability(orders, calendar, selectedTown); // ✅ Pass selected town correctly
   } catch (error) {
     console.error("❌ Error fetching data:", error);
     return {};
