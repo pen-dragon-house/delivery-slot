@@ -1,9 +1,143 @@
-// Shopify API credentials (Use environment variables in production!)
+Shopify Availability
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+import fetch from 'node-fetch';
+
 const SHOPIFY_ADMIN_API_URL = "https://pendragons-smokehouse.myshopify.com/admin/api/2025-01/graphql.json";
 const SHOPIFY_ACCESS_TOKEN = "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";
-const DELIVERY_CALENDAR_URL = "https://pen-dragon-house.github.io/delivery-slot/delivery_calendar.json";
+const DELIVERY_CALENDAR_URL = "https://cdn.shopify.com/s/files/1/0919/1702/5562/files/delivery_calendar.json?v=1741626987";
 
-// GraphQL Query to fetch recent orders with delivery details
 const ORDER_QUERY = `{
   orders(first: 50) {
     edges {
@@ -37,7 +171,6 @@ async function fetchDeliveryCalendar() {
   return await response.json();
 }
 
-// ✅ Ensure date is correctly formatted
 function formatShopifyDate(dateString) {
   if (!dateString || typeof dateString !== "string") return null;
 
@@ -54,12 +187,10 @@ function formatShopifyDate(dateString) {
   return `${year}-${months[month]}-${day.padStart(2, "0")}`;
 }
 
-// ✅ Preserve Shopify's EXACT time format
 function normalizeTimeFormat(time) {
   return time.replace(/\s+/g, " ").trim();
 }
 
-// ✅ Match ZIP code to town
 function findTownByZip(zip, calendar) {
   if (!zip) return null;
   for (let town in calendar) {
@@ -70,12 +201,10 @@ function findTownByZip(zip, calendar) {
   return null;
 }
 
-// ✅ Process availability **filtered by town**
 function processAvailability(orders, calendar, selectedTown) {
   let availability = {};
   let bookedSlots = {};
 
-  // ✅ Extract booked slots from Shopify orders
   orders.forEach(order => {
     const deliveryDateRaw = order.customAttributes.find(attr => attr.key === "Delivery Date")?.value;
     const deliveryTimeRaw = order.customAttributes.find(attr => attr.key === "Delivery Time")?.value;
@@ -89,7 +218,6 @@ function processAvailability(orders, calendar, selectedTown) {
     const deliveryTime = normalizeTimeFormat(deliveryTimeRaw);
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
-    // ✅ Ensure booking is for the selected town
     if (deliveryTown && deliveryTown === selectedTown) {
       if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
       if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
@@ -97,7 +225,6 @@ function processAvailability(orders, calendar, selectedTown) {
     }
   });
 
-  // ✅ Compute remaining slots ONLY for the selected town
   if (calendar[selectedTown]) {
     calendar[selectedTown].dates.forEach(({ date }) => {
       if (new Date(date) >= new Date()) {
@@ -112,33 +239,27 @@ function processAvailability(orders, calendar, selectedTown) {
       }
     });
   }
-
   return availability;
 }
 
-// ✅ Fetch available slots filtered by town
 async function getAvailableSlots(selectedTown) {
   try {
     const [orders, calendar] = await Promise.all([fetchShopifyOrders(), fetchDeliveryCalendar()]);
-
-    // ✅ Ensure only slots for the selected town are processed
     if (!calendar[selectedTown]) {
       console.warn(`⚠️ No data found for town: ${selectedTown}`);
       return {};
     }
-
-    return processAvailability(orders, calendar, selectedTown); // ✅ Pass selected town correctly
+    return processAvailability(orders, calendar, selectedTown);
   } catch (error) {
     console.error("❌ Error fetching data:", error);
     return {};
   }
 }
 
-// ✅ Allow execution with specific town parameter
 (async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const town = urlParams.get("town")?.toLowerCase();
-  
+
   if (town) {
     const availability = await getAvailableSlots(town);
     console.log("📌 Final Availability Output:", availability);
