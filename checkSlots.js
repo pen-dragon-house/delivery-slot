@@ -1,6 +1,6 @@
 const SHOPIFY_ADMIN_API_URL = "https://pendragons-smokehouse.myshopify.com/admin/api/2025-01/graphql.json";
 const SHOPIFY_ACCESS_TOKEN = "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";
-const DELIVERY_CALENDAR_URL = "https://cdn.shopify.com/s/files/1/0919/1702/5562/files/delivery_calendar.json?v=1741626987";
+const DELIVERY_CALENDAR_URL = "https://pen-dragon-house.github.io/delivery-slot/delivery_calendar.json";
 
 const ORDER_QUERY = `{
   orders(first: 50) {
