@@ -19,7 +19,7 @@ const ORDER_QUERY = `{
   }
 }`;
 
-// Fetch orders from Shopify Admin API
+// Fetch orders from Shopify
 async function fetchShopifyOrders() {
   try {
     const response = await fetch(SHOPIFY_ADMIN_API_URL, {
@@ -87,11 +87,12 @@ function findTownByZip(zip, calendar) {
   return null;
 }
 
-// Process available slots
-function processAvailability(orders, calendar) {
+// Process availability **filtered by town**
+function processAvailability(orders, calendar, selectedTown) {
   let availability = {};
   let bookedSlots = {};
 
+  // ✅ Process only orders that match the selected town
   orders.forEach(order => {
     const deliveryDateRaw = order.customAttributes.find(attr => attr.key === "Delivery Date")?.value;
     const deliveryTimeRaw = order.customAttributes.find(attr => attr.key === "Delivery Time")?.value;
@@ -105,38 +106,37 @@ function processAvailability(orders, calendar) {
     const deliveryTime = deliveryTimeRaw.trim();
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
-    if (deliveryTown && calendar[deliveryTown]) {
+    // ✅ Ensure booking is for the selected town
+    if (deliveryTown && deliveryTown === selectedTown) {
       if (!bookedSlots[deliveryDate]) bookedSlots[deliveryDate] = {};
       if (!bookedSlots[deliveryDate][deliveryTime]) bookedSlots[deliveryDate][deliveryTime] = 0;
       bookedSlots[deliveryDate][deliveryTime] += 1;
     }
   });
 
-  // Compute remaining slots
-  for (let town in calendar) {
-    if (town !== "time_slots") {
-      calendar[town].dates.forEach(({ date }) => {
-        if (new Date(date) >= new Date()) {
-          availability[date] = availability[date] || {};
-          for (let timeSlot in calendar.time_slots) {
-            let maxOrders = calendar.time_slots[timeSlot].max_orders;
-            let booked = bookedSlots[date]?.[timeSlot] || 0;
-            let remaining = maxOrders - booked;
-            availability[date][timeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
-          }
+  // ✅ Compute remaining slots ONLY for the selected town
+  if (calendar[selectedTown]) {
+    calendar[selectedTown].dates.forEach(({ date }) => {
+      if (new Date(date) >= new Date()) {
+        availability[date] = availability[date] || {};
+        for (let timeSlot in calendar.time_slots) {
+          let maxOrders = calendar.time_slots[timeSlot].max_orders;
+          let booked = bookedSlots[date]?.[timeSlot] || 0;
+          let remaining = maxOrders - booked;
+          availability[date][timeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
         }
-      });
-    }
+      }
+    });
   }
 
   return availability;
 }
 
 // Main function to fetch and return availability
-async function getAvailableSlots() {
+async function getAvailableSlots(selectedTown) {
   try {
     const [orders, calendar] = await Promise.all([fetchShopifyOrders(), fetchDeliveryCalendar()]);
-    return processAvailability(orders, calendar);
+    return processAvailability(orders, calendar, selectedTown);
   } catch (error) {
     console.error("❌ Error fetching data:", error);
     return {};
