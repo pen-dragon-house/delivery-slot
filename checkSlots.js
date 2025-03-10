@@ -103,7 +103,7 @@ function processAvailability(orders, calendar, selectedTown) {
     const deliveryDate = formatShopifyDate(deliveryDateRaw);
     if (!deliveryDate) return;
 
-    const deliveryTime = deliveryTimeRaw.trim();
+    const deliveryTime = deliveryTimeRaw.trim(); // ✅ Use raw format (NO conversions)
     const deliveryTown = findTownByZip(deliveryZip, calendar);
 
     // ✅ Ensure booking is for the selected town
@@ -120,8 +120,9 @@ function processAvailability(orders, calendar, selectedTown) {
       if (new Date(date) >= new Date()) {
         availability[date] = availability[date] || {};
         for (let timeSlot in calendar.time_slots) {
+          let formattedTimeSlot = timeSlot.trim(); // ✅ Keep exact formatting
           let maxOrders = calendar.time_slots[timeSlot].max_orders;
-          let booked = bookedSlots[date]?.[timeSlot] || 0;
+          let booked = bookedSlots[date]?.[formattedTimeSlot] || 0;
           let remaining = maxOrders - booked;
           availability[date][timeSlot] = remaining > 0 ? `${remaining} slots left` : "Fully Booked";
         }
