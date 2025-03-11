@@ -113,15 +113,15 @@ function processAvailability(orders, calendar, selectedTown) {
           // Apply custom slot messages
         let slotMessage;
         if (remaining >= 4) {
-          slotMessage = `${remaining} slots still available`;
+          slotMessage = `${remaining} Left`;
         } else if (remaining === 3) {
-          slotMessage = `3 slots still available`;
+          slotMessage = `3 Left`;
         } else if (remaining === 2) {
-          slotMessage = `2 slots left —going fast!`;
+          slotMessage = `🀄️ Just 2 Left`;
         } else if (remaining === 1) {
-          slotMessage = `Last slot remaining!`;
+          slotMessage = `🔥 Only 1 Left!`;
         } else {
-          slotMessage = `Fully booked`;
+          slotMessage = `Fully Booked`;
         }
 
         availability[date][formattedTimeSlot] = slotMessage;
